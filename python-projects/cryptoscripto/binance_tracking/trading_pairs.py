@@ -8,6 +8,7 @@ import json, requests, sys, os.path, csv
 from binance_helper import BinanceException
 from trading_pairs_params import *
 from urllib.parse import urljoin
+import sql_helpers as sqlh
 import sqlite3
 
 sys.path.append('/home/graham/Desktop/keys/binance')
@@ -39,37 +40,42 @@ def split_pairs(pairs, quote):
     split_tuple  = [(curr_pair[:-length], curr_pair[-length:]) for curr_pair in pairs]
     return split_tuple
 
-def create_db_connection(name, to):
-    try:
-        db = sqlite3.connect(name, timeout=to)
-        #print('connection success')
-    except Exception as e:
-        print('An error has occured connecting to the database: ', e)
-    return db
 
-def create_db_table(db, name, col_tup):
-    cmd_string = 'CREATE TABLE IF NOT EXISTS ' + SYMBOL_TABLE_NAME + \
-                        ' (' + ','.join(col_tup) + ')'
-    c = db.cursor()
-    c.execute(cmd_string)
-    db.commit()
+
+
+
 
 #    c.execute('PRAGMA table_info(symbols)')
 #    for r in c:
 #        print(r)
 
-def fill_db_table(db, table, quote_tup):
+def fill_symbol_table(db, table_name, quote_tup):
     c = db.cursor()
-
+    ret = True
     for quote in quote_tup:
         quote_pairs = poll_pairs(quote)
+        l = len(quote_pairs)
+        #print(l)
+        for pair in quote_pairs:
+            cmd = f'INSERT INTO {table_name}({quote}) VALUES(?)'
+            vals = [pair]
+            c.execute(cmd, vals)
+
+        #cmd2 = f'SELECT COUNT(*) from {table_name} WHERE {quote}'
+        cmd2 = f'SELECT COUNT({quote}) from {table_name}'
+        c.execute(cmd2)
+        res = c.fetchall()
+        #print(res[0][0])
+        if res[0][0] != l:
+            raise Exception('fill operation failed')
         #base_list, = filter_bases(quote_pairs, quote)
         #quote_list = filter_quotes(quote_pairs, quote)
-        split_tuple = split_pairs(quote_pairs, quote)
-
-        print(quote_pairs)
-        print()
-        print(split_tuple)
+        #split_tuple = split_pairs(quote_pairs, quote)
+    db.commit()
+    #return ret
+        #print(quote_pairs)
+        #print()
+        #print(split_tuple)
 
 
 def get_all_pairs():
@@ -119,11 +125,36 @@ def poll_pairs(quote):
 def update_trading_pairs():
 
 
-    db = create_db_connection(DB_NAME, DB_TIMEOUT)
+    db = sqlh.create_db_connection(DB_NAME, DB_TIMEOUT)
 
-    create_db_table(db, SYMBOL_TABLE_NAME, COL_LIST)
+    sqlh.delete_table(db, SYMBOL_TABLE_NAME)
 
-    fill_db_table(db, SYMBOL_TABLE_NAME, QUOTE_LIST)
+    #r2 = sqlh.check_table_exists(db, SYMBOL_TABLE_NAME)
+
+    #print(r2)
+
+
+    sqlh.create_table(db, SYMBOL_TABLE_NAME, QUOTE_LIST, COL_TYPES)
+    #r3 = sqlh.check_table_exists(db, SYMBOL_TABLE_NAME)
+
+    #print(r3)
+    #sqlh.print_column_names(db, SYMBOL_TABLE_NAME)
+
+    #sqlh.print_columns(db,SYMBOL_TABLE_NAME)
+
+
+
+
+    #sqlh.print_column_names(db, SYMBOL_TABLE_NAME)
+
+    #create_db_table(db, SYMBOL_TABLE_NAME, QUOTE_LIST)
+
+    #sqlh.get_all_tables(db)
+
+    curr_pairs = fill_symbol_table(db, SYMBOL_TABLE_NAME, QUOTE_LIST)
+    #sqlh.print_columns(db,SYMBOL_TABLE_NAME)
+
+    #slqh.print_table(db, SYMBOL_TABLE_NAME)
 
     db.close()
     #check if symbols table already exists

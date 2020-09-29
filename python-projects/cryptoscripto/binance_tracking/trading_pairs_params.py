@@ -1,5 +1,11 @@
 DB_NAME = 'prices'
 DB_TIMEOUT = 120
 SYMBOL_TABLE_NAME = 'symbols'
-COL_LIST = ('BTC_Pairs text',)
+PRICES_TABLE_NAME = 'prices'
+COL_LIST = ('BTC',)
 QUOTE_LIST = ('BTC',)
+COL_TYPES = ('text')
+TIME_COL = ('symbols','prices')
+TIME_COL_TYPES = ('text','text')
+TIME_TABLE_NAME = 'last_update'
+SECONDS_PER_DAY = 84600
