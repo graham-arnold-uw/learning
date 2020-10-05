@@ -49,14 +49,65 @@ def get_columns(db, table_name):
     #print(c.fetchall())
     return c.fetchall()
 
+def count_rows(db, table_name):
+    c = db.cursor()
+    c.execute(f"SELECT COUNT(rowid) from {table_name}")
+    res = c.fetchone()[0]
+    return res
+
 def add_column(db, table_name, pair):
-    c= db.cursor()
+    c = db.cursor()
 
     cmd = f"ALTER TABLE {table_name} ADD COLUMN {pair} text"
-    print(cmd)
+    #print(cmd)
     c.execute(cmd)
     db.commit()
 
+
+def add_column_new(db, table_name, col_name, col_type):
+    c = db.cursor()
+
+    cmd = f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_type}"
+    c.execute(cmd)
+    db.commit()
+
+def insert_row(db, table_name,cols,vals):
+    c = db.cursor()
+    rows_before = count_rows(db,table_name)
+    if len(cols) == 1:
+        cmd = f"INSERT INTO {table_name}({cols}) VALUES('{vals}')"
+    else:
+        cmd = f"INSERT INTO {table_name}{*cols,} VALUES{*vals,}"
+
+    c.execute(cmd)
+    db.commit()
+
+    rows_after = count_rows(db,table_name)
+    if rows_after - rows_before != 1:
+        raise sqlite3.OperationalError("Row insertion failed")
+
+def update_row(db, table_name,cols, vals, rowid):
+    c = db.cursor()
+
+    if len(cols) == 1:
+        cmd = f"UPDATE {table_name} SET {cols} = '{vals}' WHERE rowid = {row_num}"
+    else:
+        cmd = f"UPDATE {table_name} SET {*cols,} = {*vals,} WHERE rowid = {rowid}"
+
+    c.execute(cmd)
+    db.commit()
+
+    check = get_row(db, table_name, rowid)
+    if tuple(check) != tuple(vals):
+        raise sqlite3.OperationalError("Update operation failed")
+
+
+def get_row(db, table_name, rowid):
+    c = cursor()
+    cmd = f"SELECT * FROM {table_name} WHERE rowid = {rowid}"
+    c.execute(cmd)
+
+    return c.fetchall()[0]
 
 def post_single_val(db,table_name,col_name, value):
     c = db.cursor()
@@ -64,6 +115,7 @@ def post_single_val(db,table_name,col_name, value):
     cmd = f'INSERT INTO {table_name}({col_name}) VALUES(?)'
     c.execute(cmd,value)
     db.commit()
+
 
 def delete_table(db, table_name):
 
