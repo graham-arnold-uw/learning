@@ -9,3 +9,4 @@ TIME_COL = ('symbols','prices')
 TIME_COL_TYPES = ('text','text')
 TIME_TABLE_NAME = 'last_update'
 SECONDS_PER_DAY = 84600
+REQUESTS_LIM = 0.075 #1 per 0.05 sec

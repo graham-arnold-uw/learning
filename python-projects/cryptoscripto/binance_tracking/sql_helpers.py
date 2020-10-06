@@ -1,5 +1,6 @@
 import sqlite3
 from collections import defaultdict
+from collections.abc import Sequence
 
 #TIMEOUT = 120
 
@@ -74,7 +75,9 @@ def add_column_new(db, table_name, col_name, col_type):
 def insert_row(db, table_name,cols,vals):
     c = db.cursor()
     rows_before = count_rows(db,table_name)
-    if len(cols) == 1:
+
+
+    if (not isinstance(cols,Sequence)) or (isinstance(cols,str)):
         cmd = f"INSERT INTO {table_name}({cols}) VALUES('{vals}')"
     else:
         cmd = f"INSERT INTO {table_name}{*cols,} VALUES{*vals,}"
@@ -88,23 +91,40 @@ def insert_row(db, table_name,cols,vals):
 
 def update_row(db, table_name,cols, vals, rowid):
     c = db.cursor()
-
-    if len(cols) == 1:
-        cmd = f"UPDATE {table_name} SET {cols} = '{vals}' WHERE rowid = {row_num}"
+    #print(cols)
+    if (not isinstance(cols,Sequence)) or (isinstance(cols,str)):
+        cmd = f"UPDATE {table_name} SET {cols} = '{vals}' WHERE rowid = {rowid}"
     else:
         cmd = f"UPDATE {table_name} SET {*cols,} = {*vals,} WHERE rowid = {rowid}"
 
     c.execute(cmd)
     db.commit()
 
-    check = get_row(db, table_name, rowid)
-    if tuple(check) != tuple(vals):
-        raise sqlite3.OperationalError("Update operation failed")
+    check = get_row(db, table_name, cols, rowid)
+    if isinstance(vals,Sequence) and not isinstance(vals,str):
+        if tuple(check) != tuple(vals):
+            raise sqlite3.OperationalError("Update operation failed")
+    else:
+        if check[0] != vals:
+            raise sqlite3.OperationalError("Update operation failed")
 
 
-def get_row(db, table_name, rowid):
-    c = cursor()
+def get_row_all(db, table_name, rowid):
+    c = db.cursor()
     cmd = f"SELECT * FROM {table_name} WHERE rowid = {rowid}"
+    c.execute(cmd)
+
+    return c.fetchall()[0]
+
+
+def get_row(db, table_name, cols, rowid):
+    c = db.cursor()
+    if isinstance(cols,str) or  not isinstance(cols,Sequence):
+        cmd = f"SELECT {cols} FROM {table_name} WHERE rowid = {rowid}"
+    else:
+        cols_string = ",".join(cols)
+        cmd = "SELECT " + c_string + f" FROM {table_name} WHERE rowid = {rowid}"
+
     c.execute(cmd)
 
     return c.fetchall()[0]

@@ -26,6 +26,19 @@ headers = {
 }
 
 
+def get_exchange_info():
+    PATH = '/api/v3/exchangeInfo'
+    params = None
+    url = urljoin(BASE_URL, PATH)
+
+    r = requests.get(url, params=params)
+    if r.status_code == 200:
+        print(json.dumps(r.json(), indent=2))
+        #data = r.json()
+        #print(data['rateLimits'])
+    else:
+        raise BinanceException(status_code=r.status_code)
+
 #Get Server Time Diff
 def getServerTimeDiff():
     PATH =  '/api/v1/time'
@@ -47,19 +60,66 @@ def mark_time(db, table='Last Update'):
 
     sqlh.create_table(db,table,'Last Update Time')
 
-def getPrice(symbol):
+def get_prices_old(pairs):
     # Get Price
+    res = []
     PATH = '/api/v3/ticker/price'
-    params = {
-        'symbol': symbol
-    }
+    #pairs2 = ['LTCBTC']
+    for pair in pairs:
+
+        params = {
+            'symbol': pair
+        }
+
+        url = urljoin(BASE_URL, PATH)
+        r = requests.get(url, headers=headers, params=params)
+        if r.status_code == 200:
+            #print(json.dumps(r.json(), indent=2))
+            data = r.json()
+            #print(r.json())
+            #print(r.headers)
+            res.append(data['symbol'] + ": " + data['price'])
+        elif r.status_code == 429:
+            print("hit here")
+            time.sleep(5)
+            r2 = requests.get(url, headers=headers, params=params)
+            if r2.status_code != 200:
+                raise BinanceException(status_code=r.status_code)
+            data = r2.json()
+            res.append(data['symbol'] + ": " + data['price'])
+        else:
+            raise BinanceException(status_code=r.status_code)
+        time.sleep(REQUESTS_LIM)
+    return res
+
+def get_prices(pairs):
+    # Get Price
+    syms = []
+    prices = []
+    PATH = '/api/v3/ticker/price'
+    params = None
+
+    pairs = set(pairs)
+    #price_dict = dict(zip(pairs, [None]*len(pairs)))
 
     url = urljoin(BASE_URL, PATH)
     r = requests.get(url, headers=headers, params=params)
+
     if r.status_code == 200:
-        print(json.dumps(r.json(), indent=2))
+        #print(json.dumps(r.json(), indent=2))
+        data = r.json()
+        #print(json.dumps(data, indent=2))
     else:
         raise BinanceException(status_code=r.status_code)
+
+    for pair in data:
+        curr_sym = pair['symbol']
+        if curr_sym in pairs:
+            #price_dict[curr_sym] = float(pair['price'])
+            syms.append(curr_sym)
+            prices.append(pair['price'])
+    #pairs2 = ['LTCBTC']
+    return syms, prices
 
 def load_pairs(db, table_name):
 
@@ -104,6 +164,7 @@ def update_active_table(db,table_name, added, deleted):
         sqlh.update_row(db, table_name, new_pair, 1, 1)
 
     for del_pair in deleted:
+        print(del_pair)
         sqlh.update_row(db, table_name, del_pair, 0, 1)
 
     #fr_exists = sqlh.row_exists(db,table_name,1)
@@ -146,14 +207,14 @@ def initialize(db):
 def find_added_columns(new_set,prev_set):
     res = set()
     for new in new_set:
-        if new not in prev:
+        if new not in prev_set:
             res.add(new)
     return res
 
 def find_deleted_columns(new_set, prev_set):
     res = set()
     for prev in prev_set:
-        if prev not in new:
+        if prev not in new_set:
             res.add(prev)
     return res
 
@@ -172,6 +233,7 @@ def update_prices():
 
     #print(sym_cols)
     sqlh.delete_table(db,'BTC_prices')
+    sqlh.delete_table(db,'BTC_prices_active')
     #main loop through each quote currency
     #initialize prices tables for each quote if not existing
     #update each quote table's syms col for any new syms
@@ -200,7 +262,8 @@ def update_prices():
         # if any new pairs added need to add new column
         else:
             #cols = sym_cols[i]
-            prev_pairs = sqlh.get_column_names(db, quote_table)
+            prev_pairs_all = sqlh.get_column_names(db, quote_table)
+            timecol, *prev_pairs = prev_pairs_all
             prev_set = set()
             for pair in prev_pairs:
                 prev_set.add(pair[0])
@@ -209,13 +272,35 @@ def update_prices():
             prev_len = len(prev_set)
 
             del_cols = find_deleted_columns(new_set,prev_set)
+            #print(del_cols)
             add_cols = find_added_columns(new_set,prev_set)
-
-            update_active_table(db, table_active, add_cols, del_cols)
+            #print(add_cols)
+            update_active_table(db, quote_table_active, add_cols, del_cols)
 
             #add new column to the prices table now
             for added_pair in add_cols:
                 sqlh.add_column_new(db, quote_table, added_pair, 'REAL')
+
+        quote_pairs = sqlh.get_column_names(db, quote_table)
+        timestamp, *pairs_cleaned = [pair_tup[0] for pair_tup in quote_pairs]
+        #print(pairs_cleaned)
+        #print(timestamp)
+        #get_exchange_info()
+        pairs, prices = get_prices(pairs_cleaned)
+        #for i, item in enumerate(pairs):
+        #   print(item + ": " + str(prices[i]))
+        curr_time = str(int(time.time()))
+        ###sym = prices
+        price_cols = [timestamp] + pairs
+        row_vals = [curr_time] + prices
+        #print(price_cols)
+        #print(row_vals)
+
+        sqlh.insert_row(db, quote_table, price_cols, row_vals)
+        sqlh.print_columns(db,quote_table)
+        #print(prices.items())
+        #print(prices)
+        #print(prices)
 
             #if len(del_cols) > 0:
             #    for del in del_cols:
@@ -241,10 +326,11 @@ def update_prices():
         #for each pair collect their current prices
         #get current timestamp
         #construct db row: (timestamp, pricea, priceb, pricec.....)
-        sqlh.print_column_names(db,quote_table)
-        sqlh.print_column_names(db,quote_table_active)
-        sqlh.print_columns(db,quote_table)
-        sqlh.print_columns(db,quote_table_active)
+        #sqlh.print_column_names(db,quote_table)
+        #sqlh.print_column_names(db,quote_table_active)
+        #sqlh.print_columns(db,quote_table)
+        #sqlh.print_columns(db,quote_table_active)
+        #print(sqlh.get_row(db,quote_table_active, 'rowid', 1))
 
         #quote_pairs = sqlh.get_column_names(db,quote_table)
 
