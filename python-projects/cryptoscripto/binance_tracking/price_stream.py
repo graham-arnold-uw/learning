@@ -184,23 +184,35 @@ def update_active_table(db,table_name, added, deleted):
 
 def initialize(db):
     c = db.cursor()
-    #sqlh.delete_table(db,'last_update')
-    sqlh.create_table(db, 'last_update', TIME_COL, TIME_COL_TYPES)
-    #sqlh.create_table(db, PRICES_TABLE_NAME)
-    #sqlh.print_column_names(db,'last_update')
-    #tp.update_trading_pairs()
-    curr_time = str(int(time.time()))
-
-    prev_times = sqlh.first_n_rows(db,'last_update')
-    sym_prev = prev_times[0][0]
-    #print(int(curr_time) - int(sym_prev))
-    if (int(curr_time) - int(sym_prev)) > SECONDS_PER_DAY:
+    #sqlh.delete_table(db,SYMBOL_TABLE_LU_NAME)
+    if not sqlh.check_table_exists(db, SYMBOL_TABLE_LU_NAME):
+        sqlh.create_table(db, SYMBOL_TABLE_LU_NAME, TIME_COL, TIME_COL_TYPES)
+        curr_time = str(int(time.time()))
+        sqlh.insert_row(db, SYMBOL_TABLE_LU_NAME, TIME_COL, curr_time)
         tp.update_trading_pairs()
-        update_time_table(db,'last_update',SYMBOL_TABLE_NAME,curr_time)
+
+    else:
+        curr_time = str(int(time.time()))
+
+        prev_times = sqlh.first_n_rows(db, SYMBOL_TABLE_LU_NAME)
+        #print(prev_times)
+        sym_prev = prev_times[0][0]
+        #print(int(curr_time) - int(sym_prev))
+        if (int(curr_time) - int(sym_prev)) > SECONDS_PER_DAY:
+            #print('hit')
+            tp.update_trading_pairs()
+            #update_time_table(db, SYMBOL_TABLE_LU_NAME, SYMBOL_TABLE_NAME,curr_time)
+            sqlh.update_row(db, SYMBOL_TABLE_LU_NAME, TIME_COL, curr_time, 1)
+    #sqlh.delete_table(db,'last_update')
+    #sqlh.create_table(db, SYMBOL_TABLE_LU_NAME, TIME_COL, TIME_COL_TYPES)
+    #sqlh.create_table(db, PRICES_TABLE_NAME)
+    #sqlh.print_column_names(db,SYMBOL_TABLE_LU_NAME)
+    #tp.update_trading_pairs()
+
     #update_time_table(db,'last_update',SYMBOL_TABLE_NAME,curr_time)
     #update_time_table(db,'last_update',SYMBOL_TABLE_NAME,curr_time)
     #update_time_table(db,'last_update',PRICES_TABLE_NAME,curr_time)
-    #sqlh.print_columns(db,'last_update')
+    #sqlh.print_columns(db,SYMBOL_TABLE_LU_NAME)
     #sqlh.print_column_names(db,'last_update')
     #print(sqlh.row_exists(db,'last_update',1))
     #print(sqlh.row_exists(db,'symbols',1))
@@ -232,8 +244,8 @@ def update_prices():
     sym_cols = sqlh.split_columns(db,SYMBOL_TABLE_NAME)
 
     #print(sym_cols)
-    sqlh.delete_table(db,'BTC_prices')
-    sqlh.delete_table(db,'BTC_prices_active')
+    #sqlh.delete_table(db,'BTC_prices')
+    #sqlh.delete_table(db,'BTC_prices_active')
     #main loop through each quote currency
     #initialize prices tables for each quote if not existing
     #update each quote table's syms col for any new syms
@@ -297,7 +309,13 @@ def update_prices():
         #print(row_vals)
 
         sqlh.insert_row(db, quote_table, price_cols, row_vals)
-        sqlh.print_columns(db,quote_table)
+        sqlh.print_columns_formatted(db,quote_table)
+        #prev_times = sqlh.first_n_rows(db,'last_update')
+
+
+        #with open('price_stream_log.txt', "a") as f:
+        #    st = f"Table updated at {curr_time}"
+        #    f.write(st)
         #print(prices.items())
         #print(prices)
         #print(prices)

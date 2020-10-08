@@ -40,6 +40,19 @@ def print_columns(db, table_name):
     print(c.fetchall())
     return c.fetchall()
 
+def print_columns_formatted(db, table_name):
+    c = db.cursor()
+
+
+    cmd = f"SELECT rowid, * FROM {table_name}"
+
+    c.execute(cmd)
+    for row in c.fetchall():
+        print(row)
+        print()
+        print()
+    return c.fetchall()
+
 def get_columns(db, table_name):
     c = db.cursor()
 
@@ -81,7 +94,7 @@ def insert_row(db, table_name,cols,vals):
         cmd = f"INSERT INTO {table_name}({cols}) VALUES('{vals}')"
     else:
         cmd = f"INSERT INTO {table_name}{*cols,} VALUES{*vals,}"
-
+        #print(cmd)
     c.execute(cmd)
     db.commit()
 
@@ -185,19 +198,29 @@ def create_db_connection(name, tout):
         print('An error has occured connecting to the database: ', e)
     return db
 
-def create_table(db, name, col_names, col_types):
+def create_table(db, name, cols, types):
+    c = db.cursor()
 
-    col_zip = zip(col_names,col_types)
-    col_heads = []
-    for i in col_zip:
-        col_heads.append(' '.join(i))
+    if (not isinstance(cols,Sequence)) or (isinstance(cols,str)):
+        #cmd = f"UPDATE {table_name} SET {cols} = '{vals}' WHERE rowid = {rowid}"
+        cmd = f"CREATE TABLE IF NOT EXISTS {name} ({cols} {types})"
+    else:
+        #cmd = f"UPDATE {table_name} SET {*cols,} = {*vals,} WHERE rowid = {rowid}"
+        col_zip = zip(cols,types)
+        res = [item[0] + " " + item[1] for item in col_zip]
+        #res = ",".join(res)
+        col_cat = ",".join(res)
+        cmd = f"CREATE TABLE IF NOT EXISTS {name} ({col_cat})"
+
+
     #col_tup_mod = [col + ' text' for col in col_tup]
     #print(col_heads)
-    cmd_string = 'CREATE TABLE IF NOT EXISTS ' + '"' + name + '"' + \
-                        ' (' + ','.join(col_heads) + ')'
-    c = db.cursor()
+    #cmd_string = 'CREATE TABLE IF NOT EXISTS ' + '"' + name + '"' + \
+    #                    ' (' + ','.join(col_heads) + ')'
+
     #print(cmd_string)
-    c.execute(cmd_string)
+    #print(cmd)
+    c.execute(cmd)
     db.commit()
 
     res = check_table_exists(db,name)
