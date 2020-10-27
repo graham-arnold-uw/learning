@@ -183,6 +183,15 @@ def first_n_rows(db,table_name, n=3):
     c.execute(cmd)
     return c.fetchall()
 
+def last_n_rows(db,table_name, n=3):
+    c = db.cursor()
+    cmd = f"SELECT * FROM ( \
+            SELECT * FROM {table_name} ORDER BY rowid DESC LIMIT 10) \
+            ORDER BY rowid ASC;"
+    #cmd = f'SELECT * FROM {table_name} LIMIT {n}'
+    c.execute(cmd)
+    return c.fetchall()
+
 
 def split_columns(db, table_name):
     #res = defaultdict(list)

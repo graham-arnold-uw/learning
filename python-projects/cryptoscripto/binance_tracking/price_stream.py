@@ -3,8 +3,8 @@
 #price_stream.py: This module pulls price data from binance and regular intervals and stores the historical data in a database
 #
 
-
 import time
+import datetime as dt
 import json
 import hmac
 import hashlib
@@ -55,10 +55,10 @@ def getServerTimeDiff():
     else:
         raise BinanceException(status_code=r.status_code)
 
-def mark_time(db, table='Last Update'):
-    c = db.cursor()
-
-    sqlh.create_table(db,table,'Last Update Time')
+#def mark_time(db, table='Last Update'):
+#    c = db.cursor()
+#
+ #   sqlh.create_table(db,table,'Last Update Time')
 
 def get_prices_old(pairs):
     # Get Price
@@ -309,8 +309,8 @@ def update_prices():
         #print(row_vals)
 
         sqlh.insert_row(db, quote_table, price_cols, row_vals)
-        sqlh.print_columns_formatted(db,quote_table)
-        #prev_times = sqlh.first_n_rows(db,'last_update')
+        #sqlh.print_columns_formatted(db,quote_table)
+        #prevcd_times = sqlh.first_n_rows(db,'last_update')
 
 
         #with open('price_stream_log.txt', "a") as f:
@@ -370,6 +370,23 @@ def update_prices():
 
     db.close()
 
+
+def price_stream_loop():
+
+    while(1):
+
+        #don't need loop to update super fast
+        #analytics are at a minimum performed at on minute time interavls
+        time.sleep(30)
+        curr_time = dt.datetime.now()
+
+        curr_min = curr_time.minute
+
+        if curr_min % PRICES_UPDATE_INTERVAL == 0:
+            update_prices()
+            #sqlh.update_row(db,PRICES_LU_TABLE,PRICES_LU_COL, int(tim.time()),1)
+            #update_analytics()
+
 if __name__ == '__main__':
     #getServerTimeDiff()
     #getPrice('BTCUSDT')
@@ -377,4 +394,4 @@ if __name__ == '__main__':
     #pairs_dir = 'trading_pairs'
     #file_name = 'current_pairs.txt'
     #sym_path = os.path.join(base_path, pairs_dir, file_name)
-    update_prices()
+    price_stream_loop()
