@@ -186,7 +186,7 @@ def first_n_rows(db,table_name, n=3):
 def last_n_rows(db,table_name, n=3):
     c = db.cursor()
     cmd = f"SELECT * FROM ( \
-            SELECT * FROM {table_name} ORDER BY rowid DESC LIMIT 10) \
+            SELECT * FROM {table_name} ORDER BY rowid ASC LIMIT 10) \
             ORDER BY rowid ASC;"
     #cmd = f'SELECT * FROM {table_name} LIMIT {n}'
     c.execute(cmd)

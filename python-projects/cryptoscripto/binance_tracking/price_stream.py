@@ -16,7 +16,12 @@ from trading_pairs_params import *
 from binance_helper import BinanceException
 from urllib.parse import urljoin, urlencode
 
-sys.path.append('/home/graham/Desktop/keys/binance')
+import getpass
+
+username = getpass.getuser()
+keypath = ['home', username, 'Desktop', 'keys','binance']
+path = os.path.join(*keypath)
+sys.path.append(path)
 from testkey1 import API_KEY
 
 BASE_URL = 'https://api.binance.com'
