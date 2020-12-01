@@ -3,38 +3,57 @@ from analytics_engine_params import *
 import time
 import sql_helpers as sqlh
 import datetime as dt
+import analytics_drivers as ad
 
 
 
 
 
+def boot_strap_databases(driver_choices,pdb, adb):
+    
+    for quote in QUOTE_LIST:
+        price_table_name = quote + '_prices'
+        price_cols = sqlh.get_column_names(pdb, price_table_name)
+        price_col_types = sqlh.get_column_types(pdb, price_table_name)
 
+        col_names = [col[0] for col in price_cols]
+        col_types = [ctype[0] for ctype in price_col_types]  
 
-
-
+        for ts, invlist in driver_choices:
+            invs = invlist.split(',')
+            for inv in invs:
+                table_name = quote + '_SMA_' + inv + ts
+                if not sqlh.check_table_exists(adb,table_name):
+                    sqlh.create_table(adb,table_name, col_names, col_types)
 
 
 def boot_strapper():
-    last_price_update = time.time()
+    pdb = sqlh.create_db_connection(PRICES_DB_NAME, DB_TIMEOUT)
+    adb = sqlh.create_db_connection(ANALYTICS_DB_NAME, DB_TIMEOUT) 
 
-    db = sqlh.create_db_connection(PRICES_DB_NAME, ps.DB_TIMEOUT)
+    driver_choices = []
+    with open('analytics_choices.txt') as f:
+        for line in f:
+            driver_choices.append(tuple(line.split(':')))
 
-    if not sqlh.check_table_exists(db,PRICES_LU_TABLE):
-        sqlh.create_table(db, PRICES_LU_TABLE, PRICES_LU_COL, 'INTEGER')
-        sqlh.insert_row(db, PRICES_LU_TABLE, PRICES_LU_COL, int(time.time()))
+
+    boot_strap_databases(driver_choices, pdb, adb)
+    sma_mngr = ad.SMA_Manager(QUOTE_LIST, driver_choices, PRICES_DB_NAME, ANALYTICS_DB_NAME)
 
 
-    #sqlh.print_columns(db,PRICES_LU_TABLE)
+    adb.close()
+    pdb.close()
 
+    return sma_mngr
 
 def update_analytics():
-
+    pass
     
 
+                                                    
 
 
-
-def analytics_loop():
+def analytics_loop(sma_mngr):
 
     while(1):
 
@@ -45,8 +64,8 @@ def analytics_loop():
 
         curr_min = curr_time.minute
 
-        if curr_min % PRICES_UPDATE_INTERVAL == 0:
-            ps.update_prices()
+        if curr_min % PRICES_UPDATE_INTERVAL == 1:
+            #ps.update_prices()
             #sqlh.update_row(db,PRICES_LU_TABLE,PRICES_LU_COL, int(tim.time()),1)
             update_analytics()
 
@@ -56,5 +75,5 @@ def analytics_loop():
 
 
 if __name__ == '__main__':
-    #boot_strapper()
-    analytics_loop()
+    sma_mngr = boot_strapper()
+    analytics_loop(sma_mngr)

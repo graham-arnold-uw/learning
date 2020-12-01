@@ -30,6 +30,14 @@ def get_column_names(db, table_name):
     #print(c.fetchall())
     return c.fetchall()
 
+def get_column_types(db, table_name):
+    c = db.cursor()
+
+    c.execute('SELECT type FROM PRAGMA_TABLE_INFO(?)', (table_name,))
+
+    #print(c.fetchall())
+    return c.fetchall()
+
 def print_columns(db, table_name):
     c = db.cursor()
 
@@ -136,7 +144,7 @@ def get_row(db, table_name, cols, rowid):
         cmd = f"SELECT {cols} FROM {table_name} WHERE rowid = {rowid}"
     else:
         cols_string = ",".join(cols)
-        cmd = "SELECT " + c_string + f" FROM {table_name} WHERE rowid = {rowid}"
+        cmd = "SELECT " + cols_string + f" FROM {table_name} WHERE rowid = {rowid}"
 
     c.execute(cmd)
 
@@ -186,7 +194,7 @@ def first_n_rows(db,table_name, n=3):
 def last_n_rows(db,table_name, n=3):
     c = db.cursor()
     cmd = f"SELECT * FROM ( \
-            SELECT * FROM {table_name} ORDER BY rowid ASC LIMIT 10) \
+            SELECT * FROM {table_name} ORDER BY rowid DESC LIMIT {n}) \
             ORDER BY rowid ASC;"
     #cmd = f'SELECT * FROM {table_name} LIMIT {n}'
     c.execute(cmd)
@@ -244,3 +252,12 @@ def check_table_exists(db, table_name):
     c.execute(cmd)
     res = c.fetchall()
     return True if res else False
+
+
+def create_table_from(db, src_table, dest_table):
+    c = db.cursor()
+    c.execute(f"CREATE TABLE {dest_table} AS SELECT * FROM {src_table} WHERE rowid = -1")
+    db.commit()
+
+    res = check_table_exists(db,dest_table)
+    return res

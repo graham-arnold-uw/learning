@@ -6,7 +6,7 @@ if __name__ == '__main__':
     db = sqlh.create_db_connection(DB_NAME, DB_TIMEOUT)
 
     #sqlh.print_columns_formatted(db,'BTC_prices')
-    res = sqlh.last_n_rows(db,'BTC_prices', 10)
+    res = sqlh.last_n_rows(db,'BTC_prices', 1)
     for row in res:
         print(row)
         print()

@@ -11,7 +11,12 @@ from urllib.parse import urljoin
 import sql_helpers as sqlh
 import sqlite3
 
-sys.path.append('/home/graham/Desktop/keys/binance')
+import getpass
+
+username = getpass.getuser()
+keypath = ['/home', username, 'Desktop', 'keys','binance']
+path = os.path.join(*keypath)
+sys.path.append(path)
 from testkey1 import API_KEY
 
 BASE_URL = 'https://api.binance.com'
@@ -51,7 +56,7 @@ def split_pairs(pairs, quote):
 
 def fill_symbol_table(db, table_name, quote_tup):
     c = db.cursor()
-    ret = True
+    #ret = True
     for quote in quote_tup:
         quote_pairs = poll_pairs(quote)
         l = len(quote_pairs)
@@ -151,7 +156,7 @@ def update_trading_pairs():
 
     #sqlh.get_all_tables(db)
 
-    curr_pairs = fill_symbol_table(db, SYMBOL_TABLE_NAME, QUOTE_LIST)
+    fill_symbol_table(db, SYMBOL_TABLE_NAME, QUOTE_LIST)
     #sqlh.print_columns(db,SYMBOL_TABLE_NAME)
 
     #slqh.print_table(db, SYMBOL_TABLE_NAME)

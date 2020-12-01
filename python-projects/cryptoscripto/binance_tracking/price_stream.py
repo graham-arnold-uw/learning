@@ -19,10 +19,11 @@ from urllib.parse import urljoin, urlencode
 import getpass
 
 username = getpass.getuser()
-keypath = ['home', username, 'Desktop', 'keys','binance']
+keypath = ['/home', username, 'Desktop', 'keys','binance']
 path = os.path.join(*keypath)
 sys.path.append(path)
 from testkey1 import API_KEY
+
 
 BASE_URL = 'https://api.binance.com'
 
@@ -108,7 +109,16 @@ def get_prices(pairs):
     #price_dict = dict(zip(pairs, [None]*len(pairs)))
 
     url = urljoin(BASE_URL, PATH)
-    r = requests.get(url, headers=headers, params=params)
+
+    for i in range(30):
+        try:
+            r = requests.get(url, headers=headers, params=params)
+        except:
+            time.sleep(60)
+        else:
+            break
+    else:
+        raise ConnectionError
 
     if r.status_code == 200:
         #print(json.dumps(r.json(), indent=2))
