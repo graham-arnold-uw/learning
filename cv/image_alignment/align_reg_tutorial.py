@@ -85,19 +85,41 @@ def align_images(image, template, maxFeatures=500, nt=0.2, debug=False):
     (h, w) = template.shape[:2]
     aligned = cv2.warpPerspective(image, H, (w, h))
     # return the aligned image
-    aligned_v = imutils.resize(aligned, width=1000)
-    template_v = imutils.resize(template, width=1000)
-    cv2.imshow("warped", aligned_v)
-    cv2.imshow("template",template_v)
-    cv2.waitKey(0)
+    #aligned_v = imutils.resize(aligned, width=1000)
+    #template_v = imutils.resize(template, width=1000)
+    #cv2.imshow("warped", aligned_v)
+    #cv2.imshow("template",template_v)
+    #cv2.waitKey(0)
+
     return aligned
 
 
 def driver():
-    im1 = cv2.imread('image1.jpg')
-    im2 = cv2.imread('image2.jpg')
+    im1 = cv2.imread('side1.jpg')
+    #template
+    template = cv2.imread('side2.jpg')
 
-    align_images(im1,im2,debug=False)
+    aligned_im = align_images(im1,template,debug=False)
+
+     # resize both the aligned and template images so we can easily
+    # visualize them on our screen
+    aligned = imutils.resize(aligned_im, width=700)
+    template = imutils.resize(template, width=700)
+    # our first output visualization of the image alignment will be a
+    # side-by-side comparison of the output aligned image and the
+    # templates
+    stacked = np.hstack([aligned, template])
+
+    # our second image alignment visualization will be *overlaying* the
+    # aligned image on the template, that way we can obtain an idea of
+    # how good our image alignment is
+    overlay = template.copy()
+    output = aligned.copy()
+    cv2.addWeighted(overlay, 0.5, output, 0.5, 0, output)
+    # show the two output image alignment visualizations
+    cv2.imshow("Image Alignment Stacked", stacked)
+    cv2.imshow("Image Alignment Overlay", output)
+    cv2.waitKey(0)
 
 
 
